@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebDAV待办事项</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 统一的 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        accent: '#f97316',
+                        light: '#f3f4f6',
+                        dark: '#1f2937'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-in-out',
+                        'slide-in': 'slideIn 0.3s ease-in-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideIn: {
+                            '0%': { transform: 'translateY(10px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .task-completed {
+                @apply line-through text-gray-500;
+            }
+            .glass-effect {
+                @apply bg-white bg-opacity-80 backdrop-blur-md;
+            }
+            .transition-all-300 {
+                @apply transition-all duration-300 ease-in-out;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/6059bd2d65d044228177a91fbf9920dd~tplv-a9rns2rl98-image.image?rcl=20251209151130624BD4160BDAE38C5664&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767856304&x-signature=mvpBvNB8VQcVI%2FNLkBnF6Z2tZNU%3D" alt="Logo" class="h-8 w-8">
+                <h1 class="text-xl font-bold text-primary">WebDAV待办事项</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="syncBtn" class="flex items-center space-x-1 px-3 py-1.5 bg-secondary text-white rounded-md hover:bg-opacity-90 transition-all-300">
+                    <img src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/c55a69de6d344e398fca145eef5b9251~tplv-a9rns2rl98-image.image?rcl=20251209151130624BD4160BDAE38C5664&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767856304&x-signature=gslukEIhG34jVSDKye1d5DWEUKQ%3D" alt="Sync" class="h-4 w-4">
+                    <span>同步</span>
+                </button>
+                <button id="settingsBtn" class="p-1.5 rounded-full hover:bg-gray-100 transition-all-300">
+                    <i class="fa fa-cog text-gray-600"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow container mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
+        <!-- 左侧边栏 -->
+        <aside class="w-full md:w-64 shrink-0">
+            <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+                <h2 class="text-lg font-semibold mb-4 flex items-center">
+                    <i class="fa fa-plus-circle text-primary mr-2"></i>
+                    新建任务
+                </h2>
+                <form id="taskForm" class="space-y-3">
+                    <div>
+                        <input type="text" id="taskTitle" placeholder="任务标题" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                    <div>
+                        <textarea id="taskDescription" placeholder="任务描述（可选）" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <select id="taskCategory" class="flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="default">默认分类</option>
+                            <option value="work">工作</option>
+                            <option value="personal">个人</option>
+                            <option value="study">学习</option>
+                            <option value="other">其他</option>
+                        </select>
+                        <select id="taskPriority" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="low">低</option>
+                            <option value="medium" selected>中</option>
+                            <option value="high">高</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all-300">
+                        添加任务
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <h2 class="text-lg font-semibold mb-4 flex items-center">
+                    <img src="https://p9-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/249bc2f0b1ee4290a66fc0cc7abecc8d~tplv-a9rns2rl98-image.image?rcl=20251209151130624BD4160BDAE38C5664&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767856304&x-signature=1%2FNVBT87pBat7tC3HUHGlqB8gF0%3D" alt="Categories" class="h-5 w-5 mr-2">
+                    任务分类
+                </h2>
+                <nav class="space-y-1">
+                    <a href="#" class="category-link flex items-center px-3 py-2 rounded-md bg-primary bg-opacity-10 text-primary" data-category="all">
+                        <i class="fa fa-list-ul w-5 text-center mr-2"></i>
+                        <span>所有任务</span>
+                        <span id="countAll" class="ml-auto bg-primary text-white text-xs px-2 py-0.5 rounded-full">0</span>
+                    </a>
+                    <a href="#" class="category-link flex items-center px-3 py-2 rounded-md hover:bg-gray-100" data-category="default">
+                        <i class="fa fa-tag w-5 text-center mr-2"></i>
+                        <span>默认分类</span>
+                        <span id="countDefault" class="ml-auto bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">0</span>
+                    </a>
+                    <a href="#" class="category-link flex items-center px-3 py-2 rounded-md hover:bg-gray-100" data-category="work">
+                        <i class="fa fa-briefcase w-5 text-center mr-2"></i>
+                        <span>工作</span>
+                        <span id="countWork" class="ml-auto bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">0</span>
+                    </a>
+                    <a href="#" class="category-link flex items-center px-3 py-2 rounded-md hover:bg-gray-100" data-category="personal">
+                        <i class="fa fa-user w-5 text-center mr-2"></i>
+                        <span>个人</span>
+                        <span id="countPersonal" class="ml-auto bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">0</span>
+                    </a>
+                    <a href="#" class="category-link flex items-center px-3 py-2 rounded-md hover:bg-gray-100" data-category="study">
+                        <i class="fa fa-book w-5 text-center mr-2"></i>
+                        <span>学习</span>
+                        <span id="countStudy" class="ml-auto bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">0</span>
+                    </a>
+                    <a href="#" class="category-link flex items-center px-3 py-2 rounded-md hover:bg-gray-100" data-category="other">
+                        <i class="fa fa-ellipsis-h w-5 text-center mr-2"></i>
+                        <span>其他</span>
+                        <span id="countOther" class="ml-auto bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">0</span>
+                    </a>
+                    <a href="#" class="category-link flex items-center px-3 py-2 rounded-md hover:bg-gray-100" data-category="completed">
+                        <i class="fa fa-check-circle w-5 text-center mr-2"></i>
+                        <span>已完成</span>
+                        <span id="countCompleted" class="ml-auto bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">0</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- 右侧任务列表 -->
+        <section class="flex-grow">
+            <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold" id="currentCategoryTitle">所有任务</h2>
+                    <div class="flex items-center space-x-2">
+                        <select id="sortTasks" class="px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="created">创建时间</option>
+                            <option value="priority">优先级</option>
+                            <option value="title">标题</option>
+                        </select>
+                        <button id="clearCompletedBtn" class="px-3 py-1.5 text-sm text-gray-600 hover:text-red-600 transition-all-300">
+                            清除已完成
+                        </button>
+                    </div>
+                </div>
+                <div class="relative">
+                    <input type="text" id="searchTasks" placeholder="搜索任务..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+
+            <div id="tasksContainer" class="space-y-3">
+                <!-- 任务列表将通过JavaScript动态生成 -->
+                <div class="animate-pulse text-center py-10 text-gray-500">
+                    <i class="fa fa-clipboard-list text-4xl mb-3"></i>
+                    <p>暂无任务，开始添加吧！</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 底部信息 -->
+    <footer class="bg-white border-t border-gray-200 py-4">
+        <div class="container mx-auto px-4 text-center text-gray-600 text-sm">
+            <p>WebDAV待办事项 &copy; 2025</p>
+        </div>
+    </footer>
+
+    <!-- WebDAV设置模态框 -->
+    <div id="webdavModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 animate-fade-in">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold">WebDAV设置</h3>
+                <button id="closeWebdavModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="p-4">
+                <form id="webdavForm" class="space-y-4">
+                    <div>
+                        <label for="webdavUrl" class="block text-sm font-medium text-gray-700 mb-1">服务器地址</label>
+                        <input type="url" id="webdavUrl" placeholder="https://example.com/webdav" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="webdavUsername" class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+                        <input type="text" id="webdavUsername" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="webdavPassword" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                        <input type="password" id="webdavPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="autoSync" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                        <label for="autoSync" class="ml-2 block text-sm text-gray-700">自动同步</label>
+                    </div>
+                    <div class="pt-2">
+                        <button type="submit" class="w-full py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all-300">
+                            保存设置
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 任务详情模态框 -->
+    <div id="taskDetailModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 animate-fade-in">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold">任务详情</h3>
+                <button id="closeTaskDetailModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="p-4">
+                <form id="taskDetailForm" class="space-y-4">
+                    <input type="hidden" id="taskDetailId">
+                    <div>
+                        <label for="taskDetailTitle" class="block text-sm font-medium text-gray-700 mb-1">标题</label>
+                        <input type="text" id="taskDetailTitle" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="taskDetailDescription" class="block text-sm font-medium text-gray-700 mb-1">描述</label>
+                        <textarea id="taskDetailDescription" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="taskDetailCategory" class="block text-sm font-medium text-gray-700 mb-1">分类</label>
+                            <select id="taskDetailCategory" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option value="default">默认分类</option>
+                                <option value="work">工作</option>
+                                <option value="personal">个人</option>
+                                <option value="study">学习</option>
+                                <option value="other">其他</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="taskDetailPriority" class="block text-sm font-medium text-gray-700 mb-1">优先级</label>
+                            <select id="taskDetailPriority" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option value="low">低</option>
+                                <option value="medium">中</option>
+                                <option value="high">高</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="taskDetailCompleted" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded">
+                        <label for="taskDetailCompleted" class="ml-2 block text-sm text-gray-700">已完成</label>
+                    </div>
+                    <div class="flex justify-between pt-2">
+                        <button type="button" id="deleteTaskBtn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-opacity-90 transition-all-300">
+                            删除任务
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all-300">
+                            保存修改
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="notification" class="fixed bottom-4 right-4 bg-white shadow-lg rounded-md p-4 max-w-xs transform translate-y-full opacity-0 transition-all duration-300 z-50 flex items-start">
+        <div id="notificationIcon" class="mr-3 text-lg"></div>
+        <div class="flex-grow">
+            <h4 id="notificationTitle" class="font-medium"></h4>
+            <p id="notificationMessage" class="text-sm text-gray-600 mt-1"></p>
+        </div>
+        <button id="closeNotification" class="ml-4 text-gray-400 hover:text-gray-600">
+            <i class="fa fa-times"></i>
+        </button>
+    </div>
+
+    <!-- 数据导入导出模态框 -->
+    <div id="dataModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 animate-fade-in">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold">数据管理</h3>
+                <button id="closeDataModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="p-4 space-y-4">
+                <div>
+                    <h4 class="font-medium mb-2">导出数据</h4>
+                    <button id="exportDataBtn" class="w-full py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-all-300">
+                        导出为JSON文件
+                    </button>
+                </div>
+                <div>
+                    <h4 class="font-medium mb-2">导入数据</h4>
+                    <div class="border-2 border-dashed border-gray-300 rounded-md p-4 text-center">
+                        <input type="file" id="importDataInput" accept=".json" class="hidden">
+                        <label for="importDataInput" class="cursor-pointer">
+                            <i class="fa fa-upload text-gray-400 text-2xl mb-2"></i>
+                            <p class="text-sm text-gray-600">点击上传JSON文件</p>
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-medium mb-2">本地存储</h4>
+                    <button id="clearLocalDataBtn" class="w-full py-2 bg-red-600 text-white rounded-md hover:bg-opacity-90 transition-all-300">
+                        清除本地数据
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 任务数据存储
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        let currentCategory = 'all';
+        let searchQuery = '';
+        let sortBy = 'created';
+        let webdavSettings = JSON.parse(localStorage.getItem('webdavSettings')) || {
+            url: '',
+            username: '',
+            password: '',
+            autoSync: false
+        };
+
+        // DOM元素
+        const taskForm = document.getElementById('taskForm');
+        const tasksContainer = document.getElementById('tasksContainer');
+        const categoryLinks = document.querySelectorAll('.category-link');
+        const currentCategoryTitle = document.getElementById('currentCategoryTitle');
+        const searchTasks = document.getElementById('searchTasks');
+        const sortTasks = document.getElementById('sortTasks');
+        const clearCompletedBtn = document.getElementById('clearCompletedBtn');
+        const syncBtn = document.getElementById('syncBtn');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const webdavModal = document.getElementById('webdavModal');
+        const closeWebdavModal = document.getElementById('closeWebdavModal');
+        const webdavForm = document.getElementById('webdavForm');
+        const taskDetailModal = document.getElementById('taskDetailModal');
+        const closeTaskDetailModal = document.getElementById('closeTaskDetailModal');
+        const taskDetailForm = document.getElementById('taskDetailForm');
+        const deleteTaskBtn = document.getElementById('deleteTaskBtn');
+        const notification = document.getElementById('notification');
+        const closeNotification = document.getElementById('closeNotification');
+        const dataModal = document.getElementById('dataModal');
+        const closeDataModal = document.getElementById('closeDataModal');
+        const exportDataBtn = document.getElementById('exportDataBtn');
+        const importDataInput = document.getElementById('importDataInput');
+        const clearLocalDataBtn = document.getElementById('clearLocalDataBtn');
+
+        // 初始化应用
+        function initApp() {
+            renderTasks();
+            updateCategoryCounts();
+            setupEventListeners();
+            loadWebdavSettings();
+            
+            // 如果启用了自动同步，设置定时同步
+            if (webdavSettings.autoSync && webdavSettings.url) {
+                setInterval(syncWithWebDAV, 5 * 60 * 1000); // 每5分钟同步一次
+            }
+        }
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 任务表单提交
+            taskForm.addEventListener('submit', handleTaskSubmit);
+            
+            // 分类切换
+            categoryLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const category = e.currentTarget.dataset.category;
+                    changeCategory(category);
+                });
+            });
+            
+            // 搜索任务
+            searchTasks.addEventListener('input', (e) => {
+                searchQuery = e.target.value.toLowerCase();
+                renderTasks();
+            });
+            
+            // 排序任务
+            sortTasks.addEventListener('change', (e) => {
+                sortBy = e.target.value;
+                renderTasks();
+            });
+            
+            // 清除已完成任务
+            clearCompletedBtn.addEventListener('click', clearCompletedTasks);
+            
+            // WebDAV同步按钮
+            syncBtn.addEventListener('click', syncWithWebDAV);
+            
+            // 设置按钮
+            settingsBtn.addEventListener('click', () => {
+                webdavModal.classList.remove('hidden');
+            });
+            
+            // 关闭WebDAV模态框
+            closeWebdavModal.addEventListener('click', () => {
+                webdavModal.classList.add('hidden');
+            });
+            
+            // WebDAV表单提交
+            webdavForm.addEventListener('submit', handleWebdavSubmit);
+            
+            // 关闭任务详情模态框
+            closeTaskDetailModal.addEventListener('click', () => {
+                taskDetailModal.classList.add('hidden');
+            });
+            
+            // 任务详情表单提交
+            taskDetailForm.addEventListener('submit', handleTaskDetailSubmit);
+            
+            // 删除任务按钮
+            deleteTaskBtn.addEventListener('click', handleDeleteTask);
+            
+            // 关闭通知
+            closeNotification.addEventListener('click', hideNotification);
+            
+            // 导出数据按钮
+            exportDataBtn.addEventListener('click', exportData);
+            
+            // 导入数据输入
+            importDataInput.addEventListener('change', handleImportData);
+            
+            // 清除本地数据按钮
+            clearLocalDataBtn.addEventListener('click', clearLocalData);
+            
+            // 点击模态框背景关闭模态框
+            webdavModal.addEventListener('click', (e) => {
+                if (e.target === webdavModal) {
+                    webdavModal.classList.add('hidden');
+                }
+            });
+            
+            taskDetailModal.addEventListener('click', (e) => {
+                if (e.target === taskDetailModal) {
+                    taskDetailModal.classList.add('hidden');
+                }
+            });
+            
+            dataModal.addEventListener('click', (e) => {
+                if (e.target === dataModal) {
+                    dataModal.classList.add('hidden');
+                }
+            });
+        }
+
+        // 处理任务表单提交
+        function handleTaskSubmit(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('taskTitle').value.trim();
+            const description = document.getElementById('taskDescription').value.trim();
+            const category = document.getElementById('taskCategory').value;
+            const priority = document.getElementById('taskPriority').value;
+            
+            if (!title) {
+                showNotification('错误', '任务标题不能为空', 'error');
+                return;
+            }
+            
+            const newTask = {
+                id: Date.now().toString(),
+                title,
+                description,
+                category,
+                priority,
+                completed: false,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            
+            tasks.push(newTask);
+            saveTasks();
+            renderTasks();
+            updateCategoryCounts();
+            
+            // 重置表单
+            taskForm.reset();
+            
+            showNotification('成功', '任务已添加', 'success');
+            
+            // 如果启用了自动同步，同步到WebDAV
+            if (webdavSettings.autoSync && webdavSettings.url) {
+                syncWithWebDAV();
+            }
+        }
+
+        // 渲染任务列表
+        function renderTasks() {
+            // 过滤任务
+            let filteredTasks = tasks;
+            
+            if (currentCategory !== 'all') {
+                if (currentCategory === 'completed') {
+                    filteredTasks = filteredTasks.filter(task => task.completed);
+                } else {
+                    filteredTasks = filteredTasks.filter(task => task.category === currentCategory);
+                }
+            }
+            
+            if (searchQuery) {
+                filteredTasks = filteredTasks.filter(task => 
+                    task.title.toLowerCase().includes(searchQuery) || 
+                    task.description.toLowerCase().includes(searchQuery)
+                );
+            }
+            
+            // 排序任务
+            filteredTasks.sort((a, b) => {
+                switch (sortBy) {
+                    case 'priority':
+                        const priorityOrder = { high: 3, medium: 2, low: 1 };
+                        return priorityOrder[b.priority] - priorityOrder[a.priority];
+                    case 'title':
+                        return a.title.localeCompare(b.title);
+                    case 'created':
+                    default:
+                        return new Date(b.createdAt) - new Date(a.createdAt);
+                }
+            });
+            
+            // 清空任务容器
+            tasksContainer.innerHTML = '';
+            
+            // 如果没有任务，显示空状态
+            if (filteredTasks.length === 0) {
+                tasksContainer.innerHTML = `
+                    <div class="animate-pulse text-center py-10 text-gray-500">
+                        <i class="fa fa-clipboard-list text-4xl mb-3"></i>
+                        <p>暂无任务</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 渲染任务
+            filteredTasks.forEach(task => {
+                const taskElement = createTaskElement(task);
+                tasksContainer.appendChild(taskElement);
+            });
+        }
+
+        // 创建任务元素
+        function createTaskElement(task) {
+            const taskDiv = document.createElement('div');
+            taskDiv.className = 'bg-white rounded-lg shadow-sm p-4 animate-slide-in';
+            taskDiv.dataset.id = task.id;
+            
+            // 设置优先级颜色
+            let priorityColor = '';
+            switch (task.priority) {
+                case 'high':
+                    priorityColor = 'bg-red-500';
+                    break;
+                case 'medium':
+                    priorityColor = 'bg-yellow-500';
+                    break;
+                case 'low':
+                    priorityColor = 'bg-green-500';
+                    break;
+            }
+            
+            // 设置分类图标
+            let categoryIcon = '';
+            switch (task.category) {
+                case 'work':
+                    categoryIcon = 'fa-briefcase';
+                    break;
+                case 'personal':
+                    categoryIcon = 'fa-user';
+                    break;
+                case 'study':
+                    categoryIcon = 'fa-book';
+                    break;
+                case 'other':
+                    categoryIcon = 'fa-ellipsis-h';
+                    break;
+                default:
+                    categoryIcon = 'fa-tag';
+            }
+            
+            taskDiv.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 mr-3">
+                        <input type="checkbox" class="task-checkbox h-5 w-5 text-primary focus:ring-primary border-gray-300 rounded" ${task.completed ? 'checked' : ''}>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="flex items-center justify-between mb-1">
+                            <h3 class="text-base font-medium ${task.completed ? 'task-completed' : ''}">${task.title}</h3>
+                            <div class="flex items-center space-x-2">
+                                <span class="inline-block w-2 h-2 rounded-full ${priorityColor}"></span>
+                                <span class="text-xs text-gray-500">${formatDate(task.createdAt)}</span>
+                            </div>
+                        </div>
+                        ${task.description ? `<p class="text-sm text-gray-600 mb-2 ${task.completed ? 'task-completed' : ''}">${task.description}</p>` : ''}
+                        <div class="flex items-center justify-between">
+                            <span class="inline-flex items-center text-xs text-gray-500">
+                                <i class="fa ${categoryIcon} mr-1"></i>
+                                ${getCategoryName(task.category)}
+                            </span>
+                            <button class="text-gray-500 hover:text-primary task-edit-btn">
+                                <i class="fa fa-pencil"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 添加事件监听器
+            const checkbox = taskDiv.querySelector('.task-checkbox');
+            checkbox.addEventListener('change', () => {
+                toggleTaskCompletion(task.id);
+            });
+            
+            const editBtn = taskDiv.querySelector('.task-edit-btn');
+            editBtn.addEventListener('click', () => {
+                openTaskDetail(task.id);
+            });
+            
+            return taskDiv;
+        }
+
+        // 切换任务完成状态
+        function toggleTaskCompletion(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                task.completed = !task.completed;
+                task.updatedAt = new Date().toISOString();
+                saveTasks();
+                renderTasks();
+                updateCategoryCounts();
+                
+                // 如果启用了自动同步，同步到WebDAV
+                if (webdavSettings.autoSync && webdavSettings.url) {
+                    syncWithWebDAV();
+                }
+            }
+        }
+
+        // 打开任务详情
+        function openTaskDetail(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            
+            document.getElementById('taskDetailId').value = task.id;
+            document.getElementById('taskDetailTitle').value = task.title;
+            document.getElementById('taskDetailDescription').value = task.description;
+            document.getElementById('taskDetailCategory').value = task.category;
+            document.getElementById('taskDetailPriority').value = task.priority;
+            document.getElementById('taskDetailCompleted').checked = task.completed;
+            
+            taskDetailModal.classList.remove('hidden');
+        }
+
+        // 处理任务详情表单提交
+        function handleTaskDetailSubmit(e) {
+            e.preventDefault();
+            
+            const taskId = document.getElementById('taskDetailId').value;
+            const task = tasks.find(t => t.id === taskId);
+            
+            if (!task) {
+                showNotification('错误', '任务不存在', 'error');
+                return;
+            }
+            
+            const title = document.getElementById('taskDetailTitle').value.trim();
+            if (!title) {
+                showNotification('错误', '任务标题不能为空', 'error');
+                return;
+            }
+            
+            task.title = title;
+            task.description = document.getElementById('taskDetailDescription').value.trim();
+            task.category = document.getElementById('taskDetailCategory').value;
+            task.priority = document.getElementById('taskDetailPriority').value;
+            task.completed = document.getElementById('taskDetailCompleted').checked;
+            task.updatedAt = new Date().toISOString();
+            
+            saveTasks();
+            renderTasks();
+            updateCategoryCounts();
+            
+            taskDetailModal.classList.add('hidden');
+            showNotification('成功', '任务已更新', 'success');
+            
+            // 如果启用了自动同步，同步到WebDAV
+            if (webdavSettings.autoSync && webdavSettings.url) {
+                syncWithWebDAV();
+            }
+        }
+
+        // 处理删除任务
+        function handleDeleteTask() {
+            const taskId = document.getElementById('taskDetailId').value;
+            const taskIndex = tasks.findIndex(t => t.id === taskId);
+            
+            if (taskIndex === -1) {
+                showNotification('错误', '任务不存在', 'error');
+                return;
+            }
+            
+            tasks.splice(taskIndex, 1);
+            saveTasks();
+            renderTasks();
+            updateCategoryCounts();
+            
+            taskDetailModal.classList.add('hidden');
+            showNotification('成功', '任务已删除', 'success');
+            
+            // 如果启用了自动同步，同步到WebDAV
+            if (webdavSettings.autoSync && webdavSettings.url) {
+                syncWithWebDAV();
+            }
+        }
+
+        // 更改分类
+        function changeCategory(category) {
+            currentCategory = category;
+            
+            // 更新分类标题
+            currentCategoryTitle.textContent = getCategoryName(category);
+            
+            // 更新分类链接样式
+            categoryLinks.forEach(link => {
+                if (link.dataset.category === category) {
+                    link.classList.add('bg-primary', 'bg-opacity-10', 'text-primary');
+                    link.classList.remove('hover:bg-gray-100');
+                } else {
+                    link.classList.remove('bg-primary', 'bg-opacity-10', 'text-primary');
+                    link.classList.add('hover:bg-gray-100');
+                }
+            });
+            
+            renderTasks();
+        }
+
+        // 获取分类名称
+        function getCategoryName(category) {
+            switch (category) {
+                case 'all':
+                    return '所有任务';
+                case 'default':
+                    return '默认分类';
+                case 'work':
+                    return '工作';
+                case 'personal':
+                    return '个人';
+                case 'study':
+                    return '学习';
+                case 'other':
+                    return '其他';
+                case 'completed':
+                    return '已完成';
+                default:
+                    return category;
+            }
+        }
+
+        // 清除已完成任务
+        function clearCompletedTasks() {
+            const completedTasksCount = tasks.filter(task => task.completed).length;
+            
+            if (completedTasksCount === 0) {
+                showNotification('提示', '没有已完成的任务', 'info');
+                return;
+            }
+            
+            if (!confirm(`确定要删除 ${completedTasksCount} 个已完成的任务吗？`)) {
+                return;
+            }
+            
+            tasks = tasks.filter(task => !task.completed);
+            saveTasks();
+            renderTasks();
+            updateCategoryCounts();
+            
+            showNotification('成功', `已删除 ${completedTasksCount} 个已完成的任务`, 'success');
+            
+            // 如果启用了自动同步，同步到WebDAV
+            if (webdavSettings.autoSync && webdavSettings.url) {
+                syncWithWebDAV();
+            }
+        }
+
+        // 更新分类计数
+        function updateCategoryCounts() {
+            document.getElementById('countAll').textContent = tasks.length;
+            document.getElementById('countDefault').textContent = tasks.filter(task => task.category === 'default' && !task.completed).length;
+            document.getElementById('countWork').textContent = tasks.filter(task => task.category === 'work' && !task.completed).length;
+            document.getElementById('countPersonal').textContent = tasks.filter(task => task.category === 'personal' && !task.completed).length;
+            document.getElementById('countStudy').textContent = tasks.filter(task => task.category === 'study' && !task.completed).length;
+            document.getElementById('countOther').textContent = tasks.filter(task => task.category === 'other' && !task.completed).length;
+            document.getElementById('countCompleted').textContent = tasks.filter(task => task.completed).length;
+        }
+
+        // 保存任务到本地存储
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        // 处理WebDAV表单提交
+        function handleWebdavSubmit(e) {
+            e.preventDefault();
+            
+            const url = document.getElementById('webdavUrl').value.trim();
+            const username = document.getElementById('webdavUsername').value.trim();
+            const password = document.getElementById('webdavPassword').value;
+            const autoSync = document.getElementById('autoSync').checked;
+            
+            if (!url) {
+                showNotification('错误', '服务器地址不能为空', 'error');
+                return;
+            }
+            
+            webdavSettings = {
+                url,
+                username,
+                password,
+                autoSync
+            };
+            
+            localStorage.setItem('webdavSettings', JSON.stringify(webdavSettings));
+            
+            webdavModal.classList.add('hidden');
+            showNotification('成功', 'WebDAV设置已保存', 'success');
+            
+            // 立即同步一次
+            syncWithWebDAV();
+        }
+
+        // 加载WebDAV设置
+        function loadWebdavSettings() {
+            document.getElementById('webdavUrl').value = webdavSettings.url || '';
+            document.getElementById('webdavUsername').value = webdavSettings.username || '';
+            document.getElementById('webdavPassword').value = webdavSettings.password || '';
+            document.getElementById('autoSync').checked = webdavSettings.autoSync || false;
+        }
+
+        // 与WebDAV服务器同步
+        async function syncWithWebDAV() {
+            if (!webdavSettings.url) {
+                showNotification('错误', '请先配置WebDAV设置', 'error');
+                return;
+            }
+            
+            try {
+                showNotification('同步中', '正在与服务器同步...', 'info');
+                
+                // 在实际应用中，这里应该实现与WebDAV服务器的通信
+                // 由于这是一个前端演示，我们模拟同步过程
+                
+                // 模拟网络延迟
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // 模拟成功
+                showNotification('成功', '同步完成', 'success');
+            } catch (error) {
+                console.error('WebDAV同步失败:', error);
+                showNotification('错误', '同步失败: ' + error.message, 'error');
+            }
+        }
+
+        // 显示通知
+        function showNotification(title, message, type = 'info') {
+            const notificationIcon = document.getElementById('notificationIcon');
+            const notificationTitle = document.getElementById('notificationTitle');
+            const notificationMessage = document.getElementById('notificationMessage');
+            
+            notificationTitle.textContent = title;
+            notificationMessage.textContent = message;
+            
+            // 设置图标和颜色
+            switch (type) {
+                case 'success':
+                    notificationIcon.innerHTML = '<i class="fa fa-check-circle text-green-500"></i>';
+                    break;
+                case 'error':
+                    notificationIcon.innerHTML = '<i class="fa fa-exclamation-circle text-red-500"></i>';
+                    break;
+                case 'warning':
+                    notificationIcon.innerHTML = '<i class="fa fa-exclamation-triangle text-yellow-500"></i>';
+                    break;
+                case 'info':
+                default:
+                    notificationIcon.innerHTML = '<i class="fa fa-info-circle text-blue-500"></i>';
+                    break;
+            }
+            
+            // 显示通知
+            notification.classList.remove('translate-y-full', 'opacity-0');
+            
+            // 3秒后自动隐藏
+            clearTimeout(window.notificationTimeout);
+            window.notificationTimeout = setTimeout(hideNotification, 3000);
+        }
+
+        // 隐藏通知
+        function hideNotification() {
+            notification.classList.add('translate-y-full', 'opacity-0');
+        }
+
+        // 导出数据
+        function exportData() {
+            const dataStr = JSON.stringify(tasks, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `tasks-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            showNotification('成功', '数据已导出', 'success');
+        }
+
+        // 处理导入数据
+        function handleImportData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const importedTasks = JSON.parse(event.target.result);
+                    
+                    if (!Array.isArray(importedTasks)) {
+                        showNotification('错误', '无效的数据格式', 'error');
+                        return;
+                    }
+                    
+                    // 验证数据结构
+                    const validTasks = importedTasks.filter(task => 
+                        task.id && 
+                        task.title && 
+                        typeof task.completed === 'boolean' && 
+                        task.createdAt
+                    );
+                    
+                    if (validTasks.length === 0) {
+                        showNotification('错误', '没有有效的任务数据', 'error');
+                        return;
+                    }
+                    
+                    if (!confirm(`确定要导入 ${validTasks.length} 个任务吗？这将覆盖当前的任务数据。`)) {
+                        return;
+                    }
+                    
+                    tasks = validTasks;
+                    saveTasks();
+                    renderTasks();
+                    updateCategoryCounts();
+                    
+                    showNotification('成功', `已导入 ${validTasks.length} 个任务`, 'success');
+                    
+                    // 清空文件输入
+                    importDataInput.value = '';
+                    
+                    // 如果启用了自动同步，同步到WebDAV
+                    if (webdavSettings.autoSync && webdavSettings.url) {
+                        syncWithWebDAV();
+                    }
+                } catch (error) {
+                    console.error('导入数据失败:', error);
+                    showNotification('错误', '导入失败: ' + error.message, 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+
+        // 清除本地数据
+        function clearLocalData() {
+            if (!confirm('确定要清除所有本地数据吗？此操作不可撤销。')) {
+                return;
+            }
+            
+            tasks = [];
+            saveTasks();
+            renderTasks();
+            updateCategoryCounts();
+            
+            showNotification('成功', '本地数据已清除', 'success');
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            
+            if (diffMins < 1) {
+                return '刚刚';
+            } else if (diffMins < 60) {
+                return `${diffMins}分钟前`;
+            } else if (diffHours < 24) {
+                return `${diffHours}小时前`;
+            } else if (diffDays < 7) {
+                return `${diffDays}天前`;
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>

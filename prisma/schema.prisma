@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  password     String
+  name         String?
+  role         UserRole      @default(USER)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  isActive     Boolean       @default(true)
+  tasks        Task[]
+  webDavConfig WebDavConfig?
+
+  @@map("TD_User")
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  completed   Boolean      @default(false)
+  priority    TaskPriority
+  category    String
+  tags        String[]
+  dueDate     DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+
+  @@map("TD_Task")
+}
+
+model WebDavConfig {
+  id           String   @id @default(cuid())
+  serverUrl    String
+  username     String
+  password     String
+  enabled      Boolean  @default(false)
+  autoSync     Boolean  @default(false)
+  syncInterval Int      @default(5)
+  userId       String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@map("TD_WebDavConfig")
+}
+
+model Settings {
+  id                String   @id @default(cuid())
+  allowRegistration Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("TD_Settings")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+}
