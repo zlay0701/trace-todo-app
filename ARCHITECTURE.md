@@ -25,7 +25,7 @@
 - **认证**：next-auth 4.24.13，Credentials Provider，JWT session，bcryptjs 哈希密码
 - **验证码**：svg-captcha 1.4.0（注册用）；`next.config.js` 通过 `serverComponentsExternalPackages` 外置以保留字体路径
 - **同步**：webdav 5.3.0，把任务导出为 `tasks.json`
-- **校验/工具**：dotenv、jsonwebtoken（依赖中声明）
+- **工具**：dotenv（显式依赖；Prisma CLI 与测试脚本加载 `.env`）
 
 ---
 
