@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Logo from '@/components/Logo';
 import TaskForm from '@/components/TaskForm';
 import TaskList from '@/components/TaskList';
 import CategoryFilter from '@/components/CategoryFilter';
@@ -16,15 +17,16 @@ export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const { loadTasks } = useTasks();
-  
+  const { loadTasks, loadWebDavConfig } = useTasks();
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
     } else if (status === 'authenticated') {
       loadTasks();
+      loadWebDavConfig();
     }
-  }, [status, router, loadTasks]);
+  }, [status, router, loadTasks, loadWebDavConfig]);
 
   // Calculate task statistics
   const totalTasks = tasks.length;
@@ -37,19 +39,17 @@ export default function Home() {
         <header className="mb-8">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <img
-                src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/6059bd2d65d044228177a91fbf9920dd~tplv-a9rns2rl98-image.image?rcl=20251209151130624BD4160BDAE38C5664&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767856304&x-signature=mvpBvNB8VQcVI%2FNLkBnF6Z2tZNU%3D"
-                alt="Todo App"
-                className="h-10 w-10"
-              />
+              <Logo className="h-10 w-10" />
               <h1 className="text-3xl font-bold text-gray-800">Todo App</h1>
             </div>
             <div className="flex items-center gap-3">
               {/* 显示当前用户信息 */}
               {session?.user && (
                 <div className="flex flex-col items-end text-sm">
-                  <span className="font-medium text-gray-800">{session.user.name || session.user.email.split('@')[0]}</span>
-                  <span className="text-gray-500">{session.user.email}</span>
+                  <span className="font-medium text-gray-800">
+                    {session.user.name || session.user.email?.split('@')[0] || 'User'}
+                  </span>
+                  <span className="text-gray-500">{session.user.email ?? ''}</span>
                 </div>
               )}
               <SyncStatus />

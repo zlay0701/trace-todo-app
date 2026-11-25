@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/utils/prismaClient';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { authOptions } from '@/utils/authOptions';
 import bcrypt from 'bcrypt';
 
 // 获取所有用户
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);

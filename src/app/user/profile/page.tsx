@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Logo from '@/components/Logo';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
 export default function UserProfile() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,9 +19,14 @@ export default function UserProfile() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
 
-  // 如果用户未登录，重定向到登录页面
-  if (!session) {
-    router.push('/login');
+  // 如果用户未登录，在副作用中重定向（渲染期间不能调用 router.push）
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  if (status === 'loading' || !session) {
     return null;
   }
 
@@ -139,11 +145,7 @@ export default function UserProfile() {
         <header className="mb-8">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <img
-                src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/6059bd2d65d044228177a91fbf9920dd~tplv-a9rns2rl98-image.image?rcl=20251209151130624BD4160BDAE38C5664&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767856304&x-signature=mvpBvNB8VQcVI%2FNLkBnF6Z2tZNU%3D"
-                alt="Todo App"
-                className="h-10 w-10"
-              />
+              <Logo className="h-10 w-10" />
               <h1 className="text-3xl font-bold text-gray-800">User Profile</h1>
             </div>
             <div className="flex items-center gap-3">

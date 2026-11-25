@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTasks } from '@/contexts/TaskContext';
 import { testWebDavConnection } from '@/utils/syncManager';
 
@@ -14,9 +14,21 @@ const WebDavConfig: React.FC = () => {
   const [autoSync, setAutoSync] = useState(webDavConfig.autoSync);
   const [syncInterval, setSyncInterval] = useState(webDavConfig.syncInterval.toString());
   const [isTesting, setIsTesting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [saveResult, setSaveResult] = useState<string | null>(null);
 
-  const handleSave = () => {
+  // The config is loaded from the database after authentication, so keep the
+  // form fields in sync when it arrives.
+  useEffect(() => {
+    setServerUrl(webDavConfig.serverUrl);
+    setUsername(webDavConfig.username);
+    setPassword(webDavConfig.password);
+    setAutoSync(webDavConfig.autoSync);
+    setSyncInterval(webDavConfig.syncInterval.toString());
+  }, [webDavConfig]);
+
+  const handleSave = async () => {
     const config = {
       serverUrl,
       username,
@@ -26,7 +38,16 @@ const WebDavConfig: React.FC = () => {
       syncInterval: parseInt(syncInterval, 10) || 5,
     };
     
-    setWebDavConfig(config);
+    setIsSaving(true);
+    setSaveResult(null);
+    try {
+      await setWebDavConfig(config);
+      setSaveResult('Settings saved.');
+    } catch (error) {
+      setSaveResult(`Save failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleTest = async () => {
@@ -157,15 +178,22 @@ const WebDavConfig: React.FC = () => {
           
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 transition-colors"
+            disabled={isSaving}
+            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            Save Settings
+            {isSaving ? 'Saving...' : 'Save Settings'}
           </button>
         </div>
 
         {testResult && (
           <div className={`p-3 rounded-md ${testResult.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
             {testResult.message}
+          </div>
+        )}
+
+        {saveResult && (
+          <div className="p-3 rounded-md bg-blue-100 text-blue-700">
+            {saveResult}
           </div>
         )}
       </div>

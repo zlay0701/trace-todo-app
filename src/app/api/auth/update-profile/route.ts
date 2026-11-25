@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import prisma from '@/utils/prismaClient';
 import bcrypt from 'bcrypt';
 
+export const dynamic = 'force-dynamic';
+
 export async function PUT(request: Request) {
   try {
     const { email, currentPassword, newName, newPassword } = await request.json();

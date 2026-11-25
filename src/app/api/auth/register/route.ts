@@ -3,6 +3,8 @@ import { hash } from 'bcryptjs';
 import { cookies } from 'next/headers';
 import prisma from '@/utils/prismaClient';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: Request) {
   try {
     const { email, password, name, captcha } = await request.json();

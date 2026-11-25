@@ -1,4 +1,4 @@
-import { createClient, WebDAVClient } from 'webdav';
+import { AuthType, createClient, WebDAVClient } from 'webdav';
 import { Task, WebDavConfig } from '@/types';
 
 const TODO_FILE_NAME = 'tasks.json';
@@ -14,7 +14,7 @@ export class WebDavClientService {
     this.client = createClient(config.serverUrl, {
       username: config.username,
       password: config.password,
-      digest: false,
+      authType: AuthType.Password,
     });
   }
 

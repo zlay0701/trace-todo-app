@@ -52,6 +52,8 @@ function generateCaptchaSVG(text: string): string {
   return svg;
 }
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     // Generate captcha

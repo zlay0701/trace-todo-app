@@ -27,15 +27,12 @@ const initialState: TaskState = {
 const taskReducer = (state: TaskState, action: TaskAction): TaskState => {
   switch (action.type) {
     case 'ADD_TASK': {
-      const newTask: Task = {
-        ...action.payload,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+      // The API returns the persisted task with its real id and timestamps.
+      // Do not overwrite them with local values, otherwise later updates/deletes
+      // would reference an id that does not exist in the database.
       return {
         ...state,
-        tasks: [...state.tasks, newTask],
+        tasks: [action.payload, ...state.tasks],
       };
     }
 
@@ -140,7 +137,8 @@ interface TaskContextType {
   setFilter: (filter: Partial<TaskState['filter']>) => void;
   addCategory: (category: string) => void;
   addTag: (tag: string) => void;
-  setWebDavConfig: (config: WebDavConfig) => void;
+  setWebDavConfig: (config: WebDavConfig) => Promise<void>;
+  loadWebDavConfig: () => Promise<void>;
   syncTasks: () => Promise<void>;
   loadTasks: () => Promise<void>;
 }
@@ -256,9 +254,40 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     dispatch({ type: 'ADD_TAG', payload: tag });
   };
 
-  const setWebDavConfig = (config: WebDavConfig) => {
+  const setWebDavConfig = async (config: WebDavConfig) => {
+    // Update the UI first, then persist to the database for the current user.
     dispatch({ type: 'SET_WEBDAV_CONFIG', payload: config });
+
+    try {
+      const response = await fetch('/api/webdav-config', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(config),
+      });
+
+      if (!response.ok) {
+        console.error('Error saving WebDAV config:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error saving WebDAV config:', error);
+    }
   };
+
+  const loadWebDavConfig = useCallback(async () => {
+    try {
+      const response = await fetch('/api/webdav-config');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.config) {
+          dispatch({ type: 'SET_WEBDAV_CONFIG', payload: data.config });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading WebDAV config:', error);
+    }
+  }, [dispatch]);
 
   const syncTasks = async () => {
     if (!state.webDavConfig.enabled) return;
@@ -303,6 +332,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     addCategory,
     addTag,
     setWebDavConfig,
+    loadWebDavConfig,
     syncTasks,
     loadTasks,
   };

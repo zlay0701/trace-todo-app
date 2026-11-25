@@ -63,11 +63,20 @@ const SyncStatus: React.FC = () => {
   return (
     <div className="flex items-center justify-between bg-white p-3 rounded-lg shadow-sm border border-gray-200">
       <div className="flex items-center">
-        <img
-          src="https://p3-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/pc/super_tool/c55a69de6d344e398fca145eef5b9251~tplv-a9rns2rl98-image.image?rcl=20251209151130624BD4160BDAE38C5664&rk3s=8e244e95&rrcfp=f06b921b&x-expires=1767856304&x-signature=gslukEIhG34jVSDKye1d5DWEUKQ%3D"
-          alt="WebDAV"
-          className="h-6 w-6 mr-2"
-        />
+        <svg
+          className="h-6 w-6 mr-2 text-blue-500"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          role="img"
+          aria-label="WebDAV"
+        >
+          <path d="M4 7a4 4 0 014-4h8a4 4 0 014 4v10a4 4 0 01-4 4H8a4 4 0 01-4-4V7z" />
+          <path d="M8 12h8M12 8v8" />
+        </svg>
         <div className="flex items-center">
           {getStatusIcon()}
           <span className="text-sm text-gray-600">{getStatusText()}</span>
